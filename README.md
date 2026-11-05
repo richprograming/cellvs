@@ -1,4 +1,4 @@
-# cell-moa
+# cellvs
 
 Prever o mecanismo de ação (MoA) de compostos a partir de imagens de células (BBBC021, Cell Painting-like), usando embeddings de modelos pré-treinados e **sem treinar com os rótulos de MoA**.
 

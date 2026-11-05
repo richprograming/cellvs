@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from cellmoa.evaluate import aggregate, center_on_dmso, l2norm, nsc, nscb
+from cellvs.evaluate import aggregate, center_on_dmso, l2norm, nsc, nscb
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--meta", type=Path, default=Path("data/metadata.csv"))

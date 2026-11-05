@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from cellmoa.evaluate import aggregate, nsc, nscb
+from cellvs.evaluate import aggregate, nsc, nscb
 
 
 def fake_data(n_moa=4, comp_per_moa=3, batches=3, dim=16, noise=0.3, seed=0):
