@@ -81,10 +81,10 @@ IC de 95% por bootstrap de compostos (2000 reamostragens) em `results/leak_check
 
 Sem correção para comparações múltiplas e com limite inferior quase em zero: tratar como indício.
 
-A dose de taxol que está nas 10 semanas é o controle positivo, 1320 imagens das 1428 de Microtubule stabilizers, e pesa 10 dos 112 tratamentos. Sem ela os números mudam pouco, ver colunas `*_no_taxol_control`.
+A dose de taxol 0.3 está nas 10 semanas e nas 55 placas (parece um controle positivo, o que é inferência minha): são 1332 das 1428 imagens de Microtubule stabilizers, e ela pesa 10 dos 112 tratamentos. Sem ela os números mudam pouco, ver colunas `*_no_taxol_control`.
 
 ### por classe (`results/*_per_moa.csv`)
-A média esconde muita coisa. Aurora, Eg5, Protein synthesis e DNA damage ficam em 100% no NSCB em quase todas as variantes. Microtubule destabilizers é a mais afetada pela troca de semana: NSC 13/14 em todas, NSCB em 0.14285714285714285 no resnet50 e 0.21428571428571427 no dinov2 sem correção.
+A média esconde muita coisa. Aurora, Eg5, Protein synthesis e DNA damage ficam em 100% no NSCB nas 4 configurações da tabela. Microtubule destabilizers é a mais afetada pela troca de semana: NSC 13/14 em todas, NSCB em 0.14285714285714285 no resnet50 e 0.21428571428571427 no dinov2 sem correção.
 
 A centralização não piora igual: no dinov2 ela sobe destabilizers de 0.21428571428571427 para 0.5714285714285714, e derruba DNA replication de 0.875 para 0.25 e Protein degradation de 0.7142857142857143 para 0.14285714285714285. Classes com n entre 5 e 18: um tratamento pesa muito.
 
