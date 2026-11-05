@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+.ipynb_checkpoints/
+data/
+results/*
+!results/.gitkeep
+!results/*.json
+*.npy

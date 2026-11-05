@@ -1,0 +1,9 @@
+numpy
+pandas
+scikit-learn
+opencv-python-headless
+torch
+torchvision
+umap-learn
+matplotlib
+pytest
