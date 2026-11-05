@@ -3,7 +3,10 @@
 python scripts/1_embed.py --meta data/metadata.csv --img-root data/raw --backbone resnet50
 """
 import argparse
+import os
 from pathlib import Path
+
+os.environ["OPENCV_LOG_LEVEL"] = "ERROR"  # the tifs have odd tags and libtiff warns on every read
 
 import cv2
 import numpy as np
@@ -33,7 +36,8 @@ def load_channel(path, size):
     x = np.clip((x - lo) / (hi - lo + 1e-6), 0, 1)
     x = cv2.resize(x, (size, size), interpolation=cv2.INTER_AREA)
     x = np.stack([x] * 3, -1)  # fake rgb for imagenet weights
-    return ((x - MEAN) / STD).transpose(2, 0, 1)
+    # np.percentile returns float64 and numpy 2 promotes the whole array to it
+    return ((x - MEAN) / STD).transpose(2, 0, 1).astype(np.float32)
 
 
 ap = argparse.ArgumentParser()
