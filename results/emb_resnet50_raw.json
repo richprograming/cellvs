@@ -1,0 +1,11 @@
+{
+  "emb": "emb_resnet50.npy",
+  "centered": false,
+  "n_treatments": 112,
+  "nsc": 0.9196428571428571,
+  "nsc_n": 112,
+  "nscb": 0.7524752475247525,
+  "nscb_n": 101,
+  "nsc_chance": 0.059621745874934885,
+  "nscb_chance": 0.05825815025531709
+}

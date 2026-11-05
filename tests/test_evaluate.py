@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from cellvs.evaluate import aggregate, matches, nsc, nscb, per_moa
+from cellvs.evaluate import aggregate, center_on_dmso, matches, nsc, nscb, per_moa
 
 
 def fake_data(n_moa=4, comp_per_moa=3, batches=3, dim=16, noise=0.3, seed=0):
@@ -42,6 +42,16 @@ def test_neighbors_never_leak_compound_or_batch():
     m = matches(emb, meta, exclude_batch=True)
     assert (meta.compound.values[m.i] != meta.compound.values[m.j]).all()
     assert (meta.batch.values[m.i] != meta.batch.values[m.j]).all()
+
+
+def test_center_on_dmso_zeroes_each_batch_control_mean():
+    emb, meta = fake_data()
+    meta.loc[meta.compound == "c0_0", "compound"] = "DMSO"
+    out = center_on_dmso(emb, meta)
+    for b in meta.batch.unique():
+        ctrl = ((meta.batch == b) & (meta.compound == "DMSO")).values
+        assert np.allclose(out[ctrl].mean(0), 0)
+        assert np.allclose(emb[(meta.batch == b).values] - out[(meta.batch == b).values], emb[ctrl].mean(0))
 
 
 def test_per_moa_counts_match_overall():

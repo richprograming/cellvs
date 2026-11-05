@@ -1,0 +1,39 @@
+{
+  "week_only_nsc": 0.11526269504789435,
+  "week_only_n": 112,
+  "n_treatments": 112,
+  "dmso_fingerprint_nscb_resnet50": 0.05814127465378116,
+  "dmso_fingerprint_nscb_dinov2_vits14": 0.06327632763276328,
+  "diff_ci_nsc dinov2-resnet50 raw": [
+    0.008620689655172414,
+    0.07081226295828057
+  ],
+  "diff_ci_nsc dinov2-resnet50 centered_week": [
+    0.025199666643516912,
+    0.12399276859504119
+  ],
+  "diff_ci_nsc raw-centered_week resnet50": [
+    0.010416666666666666,
+    0.16216793716793715
+  ],
+  "diff_ci_nsc raw-centered_week dinov2": [
+    -0.018872416891284816,
+    0.12598425196850394
+  ],
+  "diff_ci_nscb dinov2-resnet50 raw": [
+    0.011761285909712722,
+    0.12371379479626901
+  ],
+  "diff_ci_nscb dinov2-resnet50 centered_week": [
+    0.020403009688723973,
+    0.19470105763004528
+  ],
+  "diff_ci_nscb raw-centered_week resnet50": [
+    0.009172226855713094,
+    0.19791924504950492
+  ],
+  "diff_ci_nscb raw-centered_week dinov2": [
+    -0.06796668137687555,
+    0.19357078853046583
+  ]
+}

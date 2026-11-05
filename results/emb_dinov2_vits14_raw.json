@@ -1,0 +1,11 @@
+{
+  "emb": "emb_dinov2_vits14.npy",
+  "centered": false,
+  "n_treatments": 112,
+  "nsc": 0.9553571428571429,
+  "nsc_n": 112,
+  "nscb": 0.8217821782178217,
+  "nscb_n": 101,
+  "nsc_chance": 0.059621745874934885,
+  "nscb_chance": 0.05825815025531709
+}
