@@ -8,3 +8,5 @@ torchvision
 umap-learn
 matplotlib
 pytest
+ipykernel
+nbconvert
