@@ -5,4 +5,6 @@ data/
 results/*
 !results/.gitkeep
 !results/*.json
+!results/*.csv
+!results/*.png
 *.npy

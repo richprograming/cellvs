@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from cellvs.evaluate import aggregate, nsc, nscb
+from cellvs.evaluate import aggregate, matches, nsc, nscb, per_moa
 
 
 def fake_data(n_moa=4, comp_per_moa=3, batches=3, dim=16, noise=0.3, seed=0):
@@ -33,6 +33,23 @@ def test_nscb_skips_moa_seen_in_one_batch_only():
     emb, meta = fake_data(batches=1)
     acc, n = nscb(emb, meta)  # every treatment shares its batch with everything
     assert n == 0 and np.isnan(acc)
+
+
+def test_neighbors_never_leak_compound_or_batch():
+    emb, meta = fake_data()
+    m = matches(emb, meta, exclude_batch=False)
+    assert (meta.compound.values[m.i] != meta.compound.values[m.j]).all()
+    m = matches(emb, meta, exclude_batch=True)
+    assert (meta.compound.values[m.i] != meta.compound.values[m.j]).all()
+    assert (meta.batch.values[m.i] != meta.batch.values[m.j]).all()
+
+
+def test_per_moa_counts_match_overall():
+    emb, meta = fake_data()
+    t = per_moa(emb, meta)
+    assert t.nsc_n.sum() == nsc(emb, meta)[1]
+    assert t.nscb_n.sum() == nscb(emb, meta)[1]
+    assert abs((t.nsc * t.nsc_n).sum() / t.nsc_n.sum() - nsc(emb, meta)[0]) < 1e-9
 
 
 def test_aggregate_shape():
