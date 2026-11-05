@@ -1,9 +1,13 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+# scripts/ is what python puts on sys.path, not the project root
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cellvs.evaluate import aggregate, center_on_dmso, l2norm, nsc, nscb
 
