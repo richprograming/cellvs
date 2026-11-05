@@ -36,6 +36,7 @@ python scripts/2_evaluate.py --emb results/emb_resnet50.npy --no-center
 python scripts/2_evaluate.py --emb results/emb_dinov2_vits14.npy
 python scripts/2_evaluate.py --emb results/emb_dinov2_vits14.npy --no-center
 python scripts/3_leak_checks.py
+python scripts/4_build_demo.py  # gera demo/index.html, com as imagens embutidas (fora do git)
 
 pytest
 ```

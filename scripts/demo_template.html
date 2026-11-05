@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mecanismo de ação em imagens de células</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+<style>
+/* a microscope's dark room: images glow, the page recedes. one column, the demo is the widest element */
+:root {
+  color-scheme: dark;
+  --bg: #10141c;
+  --panel: #181e29;
+  --line: #2d3644;
+  --text: #eef0ee;
+  --muted: #a9b2bf;
+  --accent: #6db2f2;
+  --hit: #5fc78f;
+  --miss: #f08a78;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --display: "Source Serif 4", Georgia, serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.55 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 40px 20px 72px; display: grid; gap: 56px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(32px, 5vw, 46px); line-height: 1.12; }
+h2 { font-size: 28px; line-height: 1.2; }
+h3 { font-size: 17px; font-weight: 600; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+section, header { display: grid; gap: 18px; }
+.lead { font-size: 20px; color: var(--muted); }
+.note { color: var(--muted); font-size: 15px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+ol.steps li { counter-increment: s; border-top: 2px solid var(--line); padding-top: 10px; }
+ol.steps li::before { content: counter(s); font-family: var(--mono); color: var(--accent); display: block; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--muted); font-size: 15px; }
+.facts b { color: var(--text); font-family: var(--mono); font-weight: 500; }
+
+.demo { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 18px; }
+.controls { display: grid; gap: 14px; grid-template-columns: minmax(260px, 2fr) repeat(3, auto); align-items: end; }
+.control { display: grid; gap: 5px; min-width: 0; }
+.control > label, .control > .lab { font-size: 13px; color: var(--muted); }
+select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; font: inherit; font-size: 15px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: var(--bg); color: var(--muted); border: 0; padding: 9px 12px; font: inherit; font-size: 15px; cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #0b1420; font-weight: 600; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font: inherit; font-size: 15px; cursor: pointer; }
+.btn:hover, .seg button:hover { outline: 1px solid var(--accent); outline-offset: -1px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.verdict { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font-size: 19px; }
+.pill { font-size: 14px; font-weight: 600; padding: 3px 10px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.hit { color: var(--hit); } .pill.miss { color: var(--miss); } .pill.na { color: var(--muted); }
+.fields { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+figure img { width: 100%; display: block; border-radius: 4px; background: #000; }
+figcaption { font-size: 14px; color: var(--muted); }
+figcaption b { display: block; color: var(--text); font-weight: 600; font-size: 15px; }
+.empty { aspect-ratio: 1; display: grid; place-items: center; padding: 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; font-size: 15px; }
+.legend-ch { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 13px; }
+th, td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { white-space: nowrap; }
+tr.nbr { cursor: pointer; }
+tr.nbr:hover td { background: var(--bg); }
+tr.nbr button { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ok { color: var(--hit); } .no { color: var(--miss); }
+
+.chart { display: grid; gap: 4px; }
+.row { display: grid; grid-template-columns: 200px minmax(120px, 1fr) 190px; gap: 12px; align-items: center; font-size: 14px; min-height: 28px; }
+.track { position: relative; height: 22px; }
+.track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
+.grid { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+.chance { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--muted); }
+.dot { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+.dot.a { width: 18px; height: 18px; background: var(--s1); border-radius: 50%; box-shadow: 0 0 0 2px var(--panel); }
+.dot.b { width: 8px; height: 8px; background: var(--s2); transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 0 2px var(--panel); }
+.vals { font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; }
+.axis { position: relative; height: 18px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.axis span:first-child { transform: none; } .axis span:last-child { transform: translateX(-100%); }
+.key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.key i { display: inline-block; margin-right: 6px; }
+.key .ka { width: 12px; height: 12px; background: var(--s1); border-radius: 50%; }
+.key .kb { width: 9px; height: 9px; background: var(--s2); transform: rotate(45deg); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 14px; }
+.umap img { width: 100%; display: block; border-radius: 4px; }
+.qa { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.qa div { display: grid; gap: 4px; align-content: start; }
+@media (max-width: 820px) {
+  .controls { grid-template-columns: 1fr; }
+  .seg button { flex: 1; white-space: normal; }
+  .fields { grid-template-columns: 1fr 1fr; }
+  .row { grid-template-columns: 1fr; gap: 2px; padding: 6px 0; }
+  main { gap: 44px; }
+}
+@media (max-width: 420px) { .fields { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Dá para saber como um composto age só olhando as células?</h1>
+  <p class="lead">Comparo imagens de células tratadas com compostos diferentes, usando modelos pré-treinados que nunca viram estas células. Se dois compostos deixam as células parecidas, eles devem ter o mesmo mecanismo de ação (MoA).</p>
+  <div class="facts" id="facts"></div>
+</header>
+
+<section>
+  <h2>Como funciona</h2>
+  <ol class="steps">
+    <li><h3>Imagens</h3><p class="note">Células MCF-7 do conjunto BBBC021, em três canais: DNA, tubulina e actina.</p></li>
+    <li><h3>Embeddings</h3><p class="note">ResNet-50 ou DINOv2 transforma cada campo em um vetor. Nenhum dos dois é treinado aqui.</p></li>
+    <li><h3>Tratamentos</h3><p class="note">Os vetores viram uma média por composto, concentração e semana.</p></li>
+    <li><h3>Vizinho mais próximo</h3><p class="note">Busco o tratamento mais parecido por cosseno. Os rótulos de MoA só servem para dar a nota.</p></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Veja um caso</h2>
+  <div class="demo">
+    <div class="controls">
+      <div class="control"><label for="pick">Tratamento</label><select id="pick"></select></div>
+      <div class="control"><span class="lab">Modelo</span><div class="seg" id="seg-b"></div></div>
+      <div class="control"><span class="lab">Correção</span><div class="seg" id="seg-c"></div></div>
+      <div class="control"><span class="lab">O vizinho não pode ser</span><div class="seg" id="seg-r"></div></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="random" type="button">Sortear outro tratamento</button>
+      <button class="btn" id="next-miss" type="button">Mostrar o próximo erro</button>
+    </div>
+    <div class="verdict" id="verdict" aria-live="polite"></div>
+    <div class="fields" id="fields"></div>
+    <div class="legend-ch">
+      <span><i class="sw" style="background:#4a78ff"></i>DNA</span>
+      <span><i class="sw" style="background:#3fd46a"></i>Tubulina</span>
+      <span><i class="sw" style="background:#ff4f4f"></i>Actina</span>
+    </div>
+    <p class="note">Cada foto é um recorte central de um único campo, o mais próximo da média do grupo. A busca usa a média de todos os campos do tratamento, e cada canal tem o contraste ajustado por imagem, como na entrada dos modelos. Compare brilho entre fotos com cuidado.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Vizinho (clique para abrir)</th><th>Concentração</th><th>Semana</th><th>MoA</th><th class="num">Cosseno</th><th>Mesmo MoA?</th></tr></thead>
+        <tbody id="nbrs"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Resultados</h2>
+  <p>NSC ignora o mesmo composto. NSCB ignora também a mesma semana, então é a nota mais honesta: compostos parecidos só contam se a semana for outra.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Modelo</th><th>Correção</th><th class="num">NSC</th><th class="num">NSCB</th><th class="num">IC 95% do NSCB</th></tr></thead>
+      <tbody id="results"></tbody>
+    </table>
+  </div>
+  <p class="note" id="results-note"></p>
+  <div class="panel">
+    <h3 id="chart-title"></h3>
+    <div class="key"><span><i class="ka"></i>NSC</span><span><i class="kb"></i>NSCB</span><span id="chance-key"></span></div>
+    <div class="chart" id="chart"></div>
+    <p class="note">Classes com poucos tratamentos: um único tratamento pesa muito. Muda junto com o modelo e a correção escolhidos em "Veja um caso".</p>
+  </div>
+</section>
+
+<section>
+  <h2>O batch effect domina?</h2>
+  <p id="batch-text"></p>
+  <figure class="umap"><img src="" id="umap-moa" alt="UMAP do DINOv2 sem correção, com um painel por MoA. Várias classes formam grupos compactos e separados."><figcaption>DINOv2, sem correção. Cada painel destaca um MoA sobre o resto.</figcaption></figure>
+  <figure class="umap"><img src="" id="umap-batch" alt="UMAP do DINOv2 sem correção, com um painel por semana. As semanas ocupam sub-regiões dos grupos maiores."><figcaption>Os mesmos pontos, com um painel por semana. As semanas ocupam sub-regiões dos blocos.</figcaption></figure>
+</section>
+
+<section>
+  <h2>Os números são bons demais?</h2>
+  <p>Sem correção nenhuma, os valores pareciam altos, então testei se a semana entregava a resposta. Quanto cada controle acerta sem usar o sinal real:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Controle</th><th>Métrica</th><th class="num">Acerto</th></tr></thead>
+      <tbody id="controls-table"></tbody>
+    </table>
+  </div>
+  <p>A semana sozinha não explica os resultados. Isso não prova que não há vazamento: não testei a posição do poço na placa, e compostos quimicamente parecidos contam como compostos diferentes.</p>
+</section>
+
+<section>
+  <h2>Exploratório: outra correção</h2>
+  <p id="sphere-text"></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Modelo</th><th>Variante</th><th class="num">NSC</th><th class="num">NSCB</th></tr></thead>
+      <tbody id="sphere-table"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Limites e o que eu faria depois</h2>
+  <div class="qa">
+    <div><h3>A tarefa é fácil por construção</h3><p class="note">As 12 classes foram escolhidas por terem mecanismo claro, e 6 foram definidas visualmente. Isso não vale para compostos em geral.</p></div>
+    <div><h3>São poucos compostos</h3><p class="note">38 compostos dão intervalos largos, e duas classes nem entram no NSCB porque só existem em uma semana.</p></div>
+    <div><h3>A imagem perde detalhe</h3><p class="note">O campo inteiro de 1024×1280 é espremido em 224×224. Recortes por célula são o próximo teste natural.</p></div>
+    <div><h3>Centralizar piorou, e não sei por quê</h3><p class="note">Centralizar no DMSO até aumentou os vizinhos da mesma semana. Essa pergunta segue em aberto.</p></div>
+    <div><h3>Não comparei com os artigos</h3><p class="note">O protocolo de agregação pode ser diferente: uso 112 tratamentos, e o BBBC lista 103 composto-concentrações.</p></div>
+    <div><h3>Próximos passos</h3><p class="note">Confirmar o sphering, testar TVN completo, recortes por célula e fine-tuning.</p></div>
+  </div>
+  <p class="note">Dados: BBBC021v1 (Caie et al., Molecular Cancer Therapeutics, 2010), do Broad Bioimage Benchmark Collection (Ljosa et al., Nature Methods, 2012). Imagens e ground truth com copyright da AstraZeneca.</p>
+</section>
+</main>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = x => (100 * x).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%";
+const dec = (x, n = 3) => Number(x).toLocaleString("pt-BR", {minimumFractionDigits: n, maximumFractionDigits: n});
+const BACK = {resnet50: "ResNet-50", dinov2_vits14: "DINOv2"};
+const CORR = {raw: "Nenhuma", centered: "Centrar no DMSO"};
+const RULE = {nsc: "o mesmo composto", nscb: "composto nem semana iguais"};
+const T = D.treatments;
+const name = t => `${t.compound} · ${String(t.conc).replace(".", ",")} · ${t.batch}`;
+
+const preferred = ["Actin disruptors", "Eg5 inhibitors", "Aurora kinase inhibitors"];
+let state = {b: "dinov2_vits14", c: "raw", r: "nscb", i: 0};
+const list = (s = state) => D.nn[`${s.b}|${s.c}|${s.r}`];
+for (const m of preferred) {
+  const l = list();
+  const i = T.findIndex((t, k) => t.moa === m && l[k] && T[l[k][0][0]].moa === m);
+  if (i >= 0) { state.i = i; break; }
+}
+
+function seg(id, opts, key) {
+  $(id).innerHTML = Object.entries(opts).map(([k, v]) => `<button type="button" id="${id}-${k}" data-k="${k}" aria-pressed="false">${v}</button>`).join("");
+  $(id).addEventListener("click", e => {
+    const k = e.target.dataset.k;
+    if (k) { state[key] = k; render(); }
+  });
+}
+seg("seg-b", BACK, "b");
+seg("seg-c", {raw: "Nenhuma", centered: "DMSO"}, "c");
+seg("seg-r", {nsc: "Mesmo composto", nscb: "E mesma semana"}, "r");
+
+$("pick").innerHTML = D.moas.map(m => `<optgroup label="${esc(m)}">` +
+  T.map((t, i) => [t, i]).filter(([t]) => t.moa === m).map(([t, i]) => `<option value="${i}">${esc(name(t))}</option>`).join("") + "</optgroup>").join("");
+$("pick").addEventListener("change", e => { state.i = +e.target.value; render(); });
+$("random").addEventListener("click", () => {
+  let i; do { i = Math.floor(Math.random() * T.length); } while (i === state.i);
+  state.i = i; render();
+});
+$("next-miss").addEventListener("click", () => {
+  const l = list();
+  for (let k = 1; k <= T.length; k++) {
+    const i = (state.i + k) % T.length;
+    if (l[i] && T[l[i][0][0]].moa !== T[i].moa) { state.i = i; render(); return; }
+  }
+});
+$("nbrs").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-j]");
+  if (tr) { state.i = +tr.dataset.j; render(); }
+});
+
+function fig(src, title, sub) {
+  return `<figure><img src="${src}" alt="${esc(title)}: células em três canais"><figcaption><b>${esc(title)}</b>${esc(sub)}</figcaption></figure>`;
+}
+
+function renderDemo() {
+  const t = T[state.i], l = list()[state.i];
+  $("pick").value = state.i;
+  for (const [id, key] of [["seg-b", "b"], ["seg-c", "c"], ["seg-r", "r"]])
+    $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.k === state[key]));
+  const miss = list().some((n, i) => n && T[n[0][0]].moa !== T[i].moa);
+  $("next-miss").disabled = !miss;
+
+  const query = fig(D.images[state.i], t.compound, `${t.moa} · ${t.batch}`);
+  const ctrl = fig(D.dmso[t.batch], "DMSO (controle)", `sem composto ativo · ${t.batch}`);
+  if (!l) {
+    $("verdict").innerHTML = `<span class="pill na">Não avaliado</span><span>${esc(t.moa)} só existe em uma semana, então não há como testar com a regra de outra semana.</span>`;
+    $("fields").innerHTML = query + `<div class="empty">Sem vizinho válido com o mesmo MoA em outra semana</div>` + ctrl;
+    $("nbrs").innerHTML = "";
+    return;
+  }
+  const n = T[l[0][0]], hit = n.moa === t.moa;
+  $("verdict").innerHTML = hit
+    ? `<span class="pill hit">✓ Acertou</span><span>O mais parecido é ${esc(n.compound)} (${esc(n.batch)}), também ${esc(n.moa)}.</span>`
+    : `<span class="pill miss">✗ Errou</span><span>O mais parecido é ${esc(n.compound)} (${esc(n.moa)}), mas o esperado era ${esc(t.moa)}.</span>`;
+  $("fields").innerHTML = query + fig(D.images[l[0][0]], `Vizinho: ${n.compound}`, `${n.moa} · ${n.batch}`) + ctrl;
+  $("nbrs").innerHTML = l.map(([j, s], k) => {
+    const x = T[j], same = x.moa === t.moa;
+    return `<tr class="nbr" data-j="${j}"><td class="num">${k + 1}</td><td><button type="button">${esc(x.compound)}</button></td><td class="num">${String(x.conc).replace(".", ",")}</td><td>${esc(x.batch)}</td><td>${esc(x.moa)}</td><td class="num">${dec(s)}</td><td class="${same ? "ok" : "no"}">${same ? "✓ sim" : "✗ não"}</td></tr>`;
+  }).join("");
+}
+
+function renderChart() {
+  const key = r => `${state.b}|${state.c}|${r}`;
+  $("chart-title").textContent = `Acerto por classe: ${BACK[state.b]}, ${CORR[state.c].toLowerCase()}`;
+  const chance = D.tables[key("nscb")].chance;
+  $("chance-key").textContent = `tracejado: acaso no NSCB (${pct(chance)})`;
+  const fa = D.perClass[key("nsc")], fb = D.perClass[key("nscb")];
+  const rows = D.moas.map(m => {
+    const a = fa[m], b = fb[m];
+    const av = a ? a[0] / a[1] : null, bv = b ? b[0] / b[1] : null;
+    const tip = `${m}: NSC ${a ? a[0] + "/" + a[1] : "n/a"}, NSCB ${b ? b[0] + "/" + b[1] : "não avaliado"}`;
+    return `<div class="row" title="${esc(tip)}"><div>${esc(m)}</div><div class="track">
+      <span class="grid" style="left:0"></span><span class="grid" style="left:50%"></span><span class="grid" style="left:100%"></span>
+      <span class="chance" style="left:${chance * 100}%"></span>
+      ${av === null ? "" : `<span class="dot a" style="left:${av * 100}%"></span>`}
+      ${bv === null ? "" : `<span class="dot b" style="left:${bv * 100}%"></span>`}
+      </div><div class="vals">NSC ${a[0]}/${a[1]} · NSCB ${b ? b[0] + "/" + b[1] : "n/a"}</div></div>`;
+  }).join("");
+  $("chart").innerHTML = rows + `<div class="row"><div></div><div class="axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div><div></div></div>`;
+}
+
+function render() { renderDemo(); renderChart(); }
+
+const c = D.counts;
+$("facts").innerHTML = [[c.images, "imagens"], [c.labeled, "rotuladas"], [c.dmso, "de DMSO"], [c.compounds, "compostos"], [c.moas, "classes de MoA"], [c.weeks, "semanas"], [c.treatments, "tratamentos"]]
+  .map(([n, l]) => `<span><b>${n.toLocaleString("pt-BR")}</b> ${l}</span>`).join("");
+
+const VARIANT = {raw: "raw", centered: "centered_week"};
+const row = (b, v) => D.checks.find(x => x.backbone === b && x.variant === v);
+const frac = (h, n) => `${h}/${n}`;
+$("results").innerHTML = Object.keys(BACK).flatMap(b => Object.keys(CORR).map(k => {
+  const a = D.tables[`${b}|${k}|nsc`], z = D.tables[`${b}|${k}|nscb`], ck = row(b, VARIANT[k]);
+  return `<tr><td>${BACK[b]}</td><td>${CORR[k]}</td><td class="num">${frac(a.hits, a.n)} (${pct(a.value)})</td><td class="num">${frac(z.hits, z.n)} (${pct(z.value)})</td><td class="num">${pct(ck.nscb_ci_low)} a ${pct(ck.nscb_ci_high)}</td></tr>`;
+})).join("");
+const anyT = D.tables["resnet50|raw|nsc"], anyB = D.tables["resnet50|raw|nscb"];
+$("results-note").textContent = `Acaso: ${pct(anyT.chance)} no NSC e ${pct(anyB.chance)} no NSCB. A correção é pela média do DMSO de cada semana. O NSCB avalia ${anyB.n} tratamentos porque Cholesterol-lowering e Kinase inhibitors só existem em uma semana. O intervalo vem de bootstrap por composto.`;
+
+const bv = D.batch, bR = bv[0], bD = bv[2];
+$("batch-text").textContent = `Ele existe, mas não domina. Sem correção, o vizinho mais próximo é da mesma semana em ${pct(bD.vizinho_mesma_semana)} dos casos, contra ${pct(bD.vizinho_mesma_semana_acaso)} ao acaso. Mesmo assim, o silhouette por tratamento é positivo por MoA (${dec(bR.silhouette_moa, 2)} no ResNet-50, ${dec(bD.silhouette_moa, 2)} no DINOv2) e negativo por semana (${dec(bR.silhouette_semana, 2)} e ${dec(bD.silhouette_semana, 2)}).`;
+$("umap-moa").src = D.umap.moa;
+$("umap-batch").src = D.umap.batch;
+
+const range = (f) => { const v = D.checks.map(f); return `${pct(Math.min(...v))} a ${pct(Math.max(...v))}`; };
+$("controls-table").innerHTML = [
+  ["Só a semana: vizinho sorteado na mesma semana, sem imagem", "NSC", pct(D.leak.week_only_nsc)],
+  ["Só o DMSO da semana, sem sinal do tratamento (ResNet-50)", "NSCB", pct(D.leak.dmso_fingerprint_nscb_resnet50)],
+  ["Só o DMSO da semana, sem sinal do tratamento (DINOv2)", "NSCB", pct(D.leak.dmso_fingerprint_nscb_dinov2_vits14)],
+  ["MoA embaralhado entre compostos da mesma semana", "NSC", range(x => x.nsc_shuffle_within_week)],
+  ["MoA embaralhado entre compostos da mesma semana", "NSCB", range(x => x.nscb_shuffle_within_week)],
+].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${r[2]}</td></tr>`).join("");
+
+$("sphere-text").textContent = "Centralizar por placa e aplicar sphering, com a PCA ajustada só no DMSO, mudou o NSCB mais do que trocar de modelo. Testei isso depois de ver a tabela e com uma única configuração, então é uma pista a confirmar em outro conjunto.";
+const VNAME = {raw: "Sem correção", centered_week: "Centrar no DMSO por semana", centered_plate: "Centrar no DMSO por placa", sphered_plate: "Placa + sphering"};
+$("sphere-table").innerHTML = D.checks.map(x => `<tr><td>${BACK[x.backbone]}</td><td>${VNAME[x.variant]}</td><td class="num">${frac(x.nsc_hits, x.nsc_n)}</td><td class="num">${frac(x.nscb_hits, x.nscb_n)}</td></tr>`).join("");
+
+render();
+</script>
+</body>
+</html>
