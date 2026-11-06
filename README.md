@@ -57,7 +57,7 @@ python scripts/2_evaluate.py --emb results/emb_dinov2_vits14.npy [--no-center]
 python scripts/3_leak_checks.py
 python scripts/5_holdout.py
 python scripts/predict.py --input pasta/ [--watch]                          # azul = DNA, verde = tubulina, vermelho = actina
-python scripts/4_build_demo.py                                              # demo/index.html, apresentação interativa
+python scripts/4_build_demo.py                                              # demo/index.html, apresentação interativa (inclui tecidos se houver resultados)
 ```
 
 Para GPU, há `notebooks/00_colab_embeddings.ipynb` (ainda não testado no Colab).

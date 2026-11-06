@@ -89,6 +89,12 @@ if lab:
     for p, t, g in zip(lab, ly, np.argsort(-s, 1)[:, :3]):
         print(f"  {p.name:20s} {names[t]:20s} -> {', '.join(names[i] for i in g)}{'' if g[0] == t else '   X'}")
     rows.append(metrics("zero-shot + classificador, fotos do laboratorio", s, ly))
+    p = np.exp(s - s.max(1, keepdims=True))
+    p /= p.sum(1, keepdims=True)
+    # stays in data/: these are the lab's own photos
+    pd.DataFrame([{"caminho": str(f), "tecido": names[t], **{f"top{k + 1}": names[i] for k, i in enumerate(np.argsort(-q)[:3])},
+                   **{f"p{k + 1}": float(q[i]) for k, i in enumerate(np.argsort(-q)[:3])}}
+                  for f, t, q in zip(lab, ly, p)]).to_csv("data/tecidos_teste_externo.csv", index=False)
     E, y = np.concatenate([E, LE]), np.concatenate([y, ly])
 
 clf = fit(E, y)

@@ -112,6 +112,27 @@ data = {
     "umap": {"moa": png_uri("umap_dinov2_vits14_raw_moa.png"), "batch": png_uri("umap_dinov2_vits14_raw_batch.png")},
 }
 
+tissue = None
+if (ROOT / "results/tecidos_eval.csv").exists():
+    from cellvs.histo import read_photo
+
+    def photo_uri(path, side=360):
+        rgb = read_photo(path)
+        s = side / max(rgb.shape[:2])
+        bgr = cv2.cvtColor(cv2.resize(rgb, None, fx=s, fy=s, interpolation=cv2.INTER_AREA), cv2.COLOR_RGB2BGR)
+        ok, buf = cv2.imencode(".jpg", bgr, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        return "data:image/jpeg;base64," + base64.b64encode(buf).decode()
+
+    ext = ROOT / "data/tecidos_teste_externo.csv"  # the lab's photos: only in this local page, never in git
+    lab = pd.read_csv(ext) if ext.exists() else pd.DataFrame()
+    tissue = {
+        "eval": pd.read_csv(ROOT / "results/tecidos_eval.csv").to_dict("records"),
+        "per": pd.read_csv(ROOT / "results/tecidos_por_tecido.csv").to_dict("records"),
+        "lab": [{"img": photo_uri(ROOT / r.caminho), "tecido": r.tecido, "top": [[r.top1, r.p1], [r.top2, r.p2], [r.top3, r.p3]]}
+                for r in lab.itertuples()],
+    }
+data["tissue"] = tissue
+
 template = (ROOT / "scripts/demo_template.html").read_text(encoding="utf-8")
 page = template.replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
 out = ROOT / "demo/index.html"

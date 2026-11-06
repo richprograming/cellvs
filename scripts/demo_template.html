@@ -26,6 +26,7 @@
   --mono: "IBM Plex Mono", Consolas, monospace;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.55 var(--body); }
 main { max-width: 1040px; margin: 0 auto; padding: 40px 20px 72px; display: grid; gap: 56px; }
@@ -100,6 +101,9 @@ tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 
 .umap img { width: 100%; display: block; border-radius: 4px; }
 .qa { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .qa div { display: grid; gap: 4px; align-content: start; }
+.lab-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.lab-grid ol { margin: 4px 0 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.lab-grid li.right { color: var(--hit); }
 @media (max-width: 820px) {
   .controls { grid-template-columns: 1fr; }
   .seg button { flex: 1; white-space: normal; }
@@ -203,6 +207,28 @@ tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 
       <thead><tr><th>Modelo</th><th>Variante</th><th class="num">NSC</th><th class="num">NSCB</th></tr></thead>
       <tbody id="sphere-table"></tbody>
     </table>
+  </div>
+</section>
+
+<section id="tissue" hidden>
+  <h2>E fotos de lâmina tiradas com o celular?</h2>
+  <p>A mesma ideia, de um modelo pré-treinado que já sabe olhar, aplicada a outra pergunta: qual tecido está na lâmina. O QuiltNet, treinado com 1 milhão de imagens de patologia, compara a foto com uma descrição de livro-texto de cada tecido. Um classificador pequeno, treinado com imagens públicas do Wikimedia Commons que escolhi uma a uma, soma o seu voto.</p>
+  <div class="panel">
+    <h3>Fotos do laboratório, pela ocular, que o modelo nunca viu</h3>
+    <p class="note">O círculo é recortado sozinho. Abaixo de cada foto: o tecido de verdade e os 3 palpites.</p>
+    <div class="lab-grid" id="lab-grid"></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Método</th><th class="num">1º palpite</th><th class="num">Entre 3</th></tr></thead>
+      <tbody id="tissue-table"></tbody>
+    </table>
+  </div>
+  <p class="note" id="tissue-note"></p>
+  <div class="panel">
+    <h3>Acerto por tecido</h3>
+    <div class="key"><span><i class="ka"></i>1º palpite</span><span><i class="kb"></i>entre 3</span><span id="tissue-chance"></span></div>
+    <div class="chart" id="tissue-chart"></div>
   </div>
 </section>
 
@@ -358,6 +384,30 @@ const VNAME = {raw: "Sem correção", centered_week: "Centrar no DMSO por semana
 $("sphere-table").innerHTML = D.checks.map(x => `<tr><td>${BACK[x.backbone]}</td><td>${VNAME[x.variant]}</td><td class="num">${frac(x.nsc_hits, x.nsc_n)}</td><td class="num">${frac(x.nscb_hits, x.nscb_n)}</td></tr>`).join("");
 
 render();
+
+if (D.tissue) {
+  const X = D.tissue;
+  $("tissue").hidden = false;
+  $("lab-grid").innerHTML = X.lab.map(p => {
+    const hit = p.top[0][0] === p.tecido;
+    const pill = hit ? `<span class="pill hit">✓ acertou</span>` : `<span class="pill miss">✗ ${p.top.some(t => t[0] === p.tecido) ? "certo no top 3" : "errou"}</span>`;
+    return `<figure><img src="${p.img}" alt="Foto de lâmina de ${esc(p.tecido)} tirada pela ocular"><figcaption><b>${esc(p.tecido)}</b>${pill}
+      <ol>${p.top.map(([n, q]) => `<li class="${n === p.tecido ? "right" : ""}">${esc(n)} <span class="num">${pct(q)}</span></li>`).join("")}</ol></figcaption></figure>`;
+  }).join("");
+  const NAME = {"zero-shot (sem treino)": "Só zero-shot, sem treino", "classificador": "Só o classificador",
+    "zero-shot + classificador": "Zero-shot + classificador", "zero-shot + classificador, fotos do laboratorio": "Idem, nas fotos do laboratório"};
+  $("tissue-table").innerHTML = X.eval.map(r => `<tr><td>${NAME[r.metodo] || esc(r.metodo)}</td><td class="num">${r.acertos_top1}/${r.n} (${pct(r.top1)})</td><td class="num">${r.acertos_top3}/${r.n} (${pct(r.top3)})</td></tr>`).join("");
+  const ch = X.eval[0].acaso_top1;
+  $("tissue-note").textContent = `${X.per.length} tecidos. Cada teste deixa autores inteiros de fora, porque a série de um autor costuma vir da mesma lâmina. Acaso: ${pct(ch)}. A configuração é a melhor de 8 testadas nas mesmas imagens, então o número real deve ser um pouco menor.`;
+  $("tissue-chance").textContent = `tracejado: acaso (${pct(ch)})`;
+  const per = [...X.per].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3);
+  $("tissue-chart").innerHTML = per.map(r => `<div class="row" title="${esc(r.tecido)}: ${r.acertos_top1}/${r.n} no 1º palpite, ${r.acertos_top3}/${r.n} entre 3"><div>${esc(r.tecido)}</div><div class="track">
+      <span class="grid" style="left:0"></span><span class="grid" style="left:50%"></span><span class="grid" style="left:100%"></span>
+      <span class="chance" style="left:${ch * 100}%"></span>
+      <span class="dot a" style="left:${r.top1 * 100}%"></span><span class="dot b" style="left:${r.top3 * 100}%"></span>
+    </div><div class="vals">${r.acertos_top1}/${r.n} · ${r.acertos_top3}/${r.n}</div></div>`).join("")
+    + `<div class="row"><div></div><div class="axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div><div></div></div>`;
+}
 </script>
 </body>
 </html>
