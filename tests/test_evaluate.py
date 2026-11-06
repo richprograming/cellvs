@@ -62,6 +62,17 @@ def test_per_moa_counts_match_overall():
     assert abs((t.nsc * t.nsc_n).sum() / t.nsc_n.sum() - nsc(emb, meta)[0]) < 1e-9
 
 
+def test_library_threshold_flags_a_class_it_never_saw():
+    from cellvs.library import build, threshold, top_k
+
+    emb, meta = fake_data(n_moa=4, noise=0.2)
+    lib = (meta.moa != "moa3").values
+    lib_e, lib_t = build(emb[lib], meta[lib].reset_index(drop=True))
+    thr = threshold(lib_e, lib_t, emb[lib], meta[lib])
+    _, sims = top_k(emb[~lib], lib_e)
+    assert (sims[:, 0] < thr).all()
+
+
 def test_aggregate_shape():
     emb, meta = fake_data()
     # duplicate every image so aggregate has something to average
