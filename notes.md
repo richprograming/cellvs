@@ -120,3 +120,34 @@ O sphering foi o melhor NSCB de todas as variantes e aproximou os dois modelos. 
 - O campo inteiro (1024x1280) é espremido para 224x224: perde resolução celular e distorce a proporção. Pode prejudicar classes sutis, e os artigos de referência costumam usar recortes por célula. Não testei.
 - Normalização por percentil por imagem: pode apagar parte da diferença de intensidade entre semanas, o que ajudaria a explicar o desempenho sem correção. Não testei.
 - Nenhum `requirements` fixado: as versões usadas estão no início desta entrada.
+
+## 2026-11-06: demo e imagens novas
+
+### demo
+`scripts/4_build_demo.py` gera `demo/index.html`, um arquivo só com as fotos reais, os vizinhos e os resultados. Ele confere que o vizinho mostrado é o mesmo da avaliação, e todos os números saem de `results/`. Fica fora do git porque embute imagens da AstraZeneca. A publicação com link foi bloqueada pelas permissões.
+
+### predict.py
+Pergunta: e se chegar uma imagem nova? O `predict.py` compara cada foto com a biblioteca de 103 tratamentos (todas as semanas, sem correção) e devolve os 5 mais parecidos. Abaixo de um limite de similaridade, responde "desconhecido". O limite é o percentil 5 da similaridade que fotos conhecidas atingem com um tratamento de outro composto e outra semana. Ele aceita CSV com 3 canais separados ou um arquivo de 3 canais por foto, e tem modo de vigiar pasta.
+
+Movi `get_backbone` e a leitura de imagem de `1_embed.py` para `cellvs/embed.py`. Para conferir: refiz o embedding de 6 imagens e a diferença para o `.npy` salvo deu 0.0. A mesma imagem como arquivo RGB único ou como 3 arquivos também deu diferença 0.0.
+
+Bug: em `library.threshold`, comparar colunas de texto em 2D quebra no pandas 3 (`StringArray` não faz broadcast). Agora converto para array de objetos do numpy.
+
+Teste de ponta a ponta com a Week10 fora da biblioteca, em 12 fotos (4 de AZ138, 4 de AZ-U, 4 de taxol): 11 acertos, nos modos CSV, pasta e vigiar pasta, com as mesmas respostas. O erro foi um AZ138 (Eg5) visto como destabilizador de microtúbulo, e os dois mecanismos param a mitose. Amostra pequena, serve só para mostrar que funciona.
+
+### simulação de experimento novo (`scripts/5_holdout.py`)
+Cada semana sai da biblioteca, uma de cada vez. O composto da consulta também sai, para simular um composto novo.
+
+| backbone | nível | top-1 | top-5 | acaso |
+|---|---|---|---|---|
+| resnet50 | tratamento | 76/101 | 86/101 | 0.058258 |
+| resnet50 | foto | 1525/2416 | 1969/2416 | 0.059263 |
+| dinov2_vits14 | tratamento | 83/101 | 90/101 | 0.058258 |
+| dinov2_vits14 | foto | 1702/2416 | 2078/2416 | 0.059263 |
+
+Por tratamento dá exatamente o NSCB da tabela, como deveria: é o mesmo protocolo. Por foto individual cai, porque uma foto é mais ruidosa que a média de um tratamento. A média por foto é dominada pelo taxol, que tem 1332 das 2416 fotos. Pesando as classes igualmente, o DINOv2 por foto fica em 0.7358954339764003 (`top1_balanced`). Por classe, em `results/holdout_per_moa.csv`, o DINOv2 vai de 0.35714285714285715 (Microtubule destabilizers) a 0.96875 (Protein synthesis).
+
+**"Desconhecido" funciona mal.** Com a classe inteira fora da biblioteca, a resposta certa é "desconhecido", mas ele só percebe em 161/2528 fotos (DINOv2) e 141/2528 (resnet50). Por tratamento, 23/112 e 17/112. AUROC entre conhecido e classe removida: 0.694248 por foto e 0.82107 por tratamento (DINOv2). Ou seja, um mecanismo novo quase sempre recebe o rótulo de um mecanismo parecido, com similaridade alta. Isso precisa estar claro para qualquer uso real. Hipótese: sem correção, todas as similaridades ficam perto de 0.9 e a margem entre conhecido e novo é pequena.
+
+### fotos do laboratório
+As fotos que tenho são de células de tecido, sem tratamento com compostos, com marcação desconhecida. O `predict.py` não serve para elas: a biblioteca é de MCF-7 tratadas. O que faria sentido é busca por semelhança e agrupamento entre as próprias fotos, sem MoA. Ainda não fiz.

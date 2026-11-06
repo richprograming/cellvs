@@ -43,6 +43,19 @@ pytest
 
 Sem GPU, em um Ryzen 5 4600G, os embeddings levaram cerca de 21 min (resnet50) e 24 min (dinov2_vits14). Para rodar com GPU há `notebooks/00_colab_embeddings.ipynb`, ainda não testado no Colab. Os UMAPs estão em `notebooks/01_umap.ipynb` e `results/umap_*.png`.
 
+## Imagens novas
+`scripts/predict.py` sugere o MoA de uma imagem nova pelos tratamentos mais parecidos da biblioteca BBBC021, ou responde "desconhecido" abaixo de um limite de similaridade. Ele aceita um CSV com os 3 canais separados ou uma pasta com uma imagem de 3 canais por campo (azul = DNA, verde = tubulina, vermelho = actina). Com `--watch`, responde cada imagem salva na pasta.
+
+```bash
+python scripts/predict.py --input pasta_com_imagens/
+python scripts/predict.py --input pasta_com_imagens/ --watch
+python scripts/5_holdout.py   # simula experimentos novos: cada semana fora da biblioteca, uma de cada vez
+```
+
+Só faz sentido para imagens feitas como as do BBBC021: MCF-7, 24 h com um composto, as mesmas 3 marcações e o mesmo aumento. Em outro laboratório o batch effect é maior, e a biblioteca precisa ser refeita com referências próprias.
+
+Na simulação (`results/holdout_summary.csv`), o DINOv2 acertou o MoA de 1702 de 2416 fotos individuais de compostos que a biblioteca nunca viu. A resposta "desconhecido" funciona mal: quando a classe inteira sai da biblioteca, ele só percebe em 161 de 2528 fotos e nas outras sugere um MoA errado.
+
 ## Métricas
 - **NSC**: vizinho mais próximo (cosseno) de cada tratamento, ignorando o mesmo composto.
 - **NSCB**: igual, mas ignorando também o mesmo batch (semana). É a que mede se o modelo generaliza ou só memoriza o batch.

@@ -1,0 +1,41 @@
+backbone,level,moa,top1,n
+dinov2_vits14,imagem,Actin disruptors,0.5833333333333334,60
+dinov2_vits14,imagem,Aurora kinase inhibitors,0.8402777777777778,144
+dinov2_vits14,imagem,DNA damage,0.8425925925925926,108
+dinov2_vits14,imagem,DNA replication,0.6770833333333334,96
+dinov2_vits14,imagem,Eg5 inhibitors,0.9236111111111112,144
+dinov2_vits14,imagem,Epithelial,0.8636363636363636,88
+dinov2_vits14,imagem,Microtubule destabilizers,0.35714285714285715,168
+dinov2_vits14,imagem,Microtubule stabilizers,0.6834733893557423,1428
+dinov2_vits14,imagem,Protein degradation,0.6190476190476191,84
+dinov2_vits14,imagem,Protein synthesis,0.96875,96
+dinov2_vits14,tratamento,Actin disruptors,0.6,5
+dinov2_vits14,tratamento,Aurora kinase inhibitors,1.0,12
+dinov2_vits14,tratamento,DNA damage,1.0,9
+dinov2_vits14,tratamento,DNA replication,0.875,8
+dinov2_vits14,tratamento,Eg5 inhibitors,1.0,12
+dinov2_vits14,tratamento,Epithelial,0.875,8
+dinov2_vits14,tratamento,Microtubule destabilizers,0.21428571428571427,14
+dinov2_vits14,tratamento,Microtubule stabilizers,0.9444444444444444,18
+dinov2_vits14,tratamento,Protein degradation,0.7142857142857143,7
+dinov2_vits14,tratamento,Protein synthesis,1.0,8
+resnet50,imagem,Actin disruptors,0.25,60
+resnet50,imagem,Aurora kinase inhibitors,0.8402777777777778,144
+resnet50,imagem,DNA damage,0.8981481481481481,108
+resnet50,imagem,DNA replication,0.5625,96
+resnet50,imagem,Eg5 inhibitors,0.8541666666666666,144
+resnet50,imagem,Epithelial,0.8409090909090909,88
+resnet50,imagem,Microtubule destabilizers,0.2619047619047619,168
+resnet50,imagem,Microtubule stabilizers,0.6169467787114846,1428
+resnet50,imagem,Protein degradation,0.36904761904761907,84
+resnet50,imagem,Protein synthesis,0.8854166666666666,96
+resnet50,tratamento,Actin disruptors,0.2,5
+resnet50,tratamento,Aurora kinase inhibitors,1.0,12
+resnet50,tratamento,DNA damage,1.0,9
+resnet50,tratamento,DNA replication,1.0,8
+resnet50,tratamento,Eg5 inhibitors,1.0,12
+resnet50,tratamento,Epithelial,0.875,8
+resnet50,tratamento,Microtubule destabilizers,0.14285714285714285,14
+resnet50,tratamento,Microtubule stabilizers,0.7777777777777778,18
+resnet50,tratamento,Protein degradation,0.42857142857142855,7
+resnet50,tratamento,Protein synthesis,1.0,8
