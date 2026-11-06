@@ -11,14 +11,12 @@ import sys
 import time
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cellvs.embed import CHANNELS, embed, get_backbone, read, read_rgb
-from cellvs.library import build, threshold, top_k
+from cellvs.embed import CHANNELS, read, read_rgb
+from cellvs.moa import MoAPredictor
 
 EXTS = {".tif", ".tiff", ".png", ".jpg", ".jpeg"}
 
@@ -35,27 +33,17 @@ ap.add_argument("--size", type=int, default=224)
 ap.add_argument("--bs", type=int, default=32)
 a = ap.parse_args()
 
-# no dmso correction: new images may come without controls, and it did not help here (see notes.md)
-meta = pd.read_csv(a.meta)
-raw = np.load(f"results/emb_{a.backbone}.npy")
-in_lib = (meta.batch != a.hold_out_week).values
-lib_e, lib_t = build(raw[in_lib], meta[in_lib].reset_index(drop=True))
-labeled = in_lib & meta.moa.notna().values
-thr = threshold(lib_e, lib_t, raw[labeled], meta[labeled])
-print(f"library: {len(lib_t)} treatments, unknown below similarity {thr:.4f}", flush=True)
-
-dev = "cuda" if torch.cuda.is_available() else "cpu"
-net = get_backbone(a.backbone).to(dev)
+pred = MoAPredictor(a.meta, a.backbone, a.hold_out_week, a.size)
+print(f"library: {len(pred.lib_t)} treatments, unknown below similarity {pred.thr:.4f}", flush=True)
 
 
 def answer(names, fields):
-    idx, sims = top_k(embed(net, fields, a.size, dev), lib_e, a.k)
     rows = []
-    for name, ii, ss in zip(names, idx, sims):
-        moa = lib_t.moa[ii[0]] if ss[0] >= thr else "desconhecido"
-        top = "; ".join(f"{lib_t.compound[i]} {lib_t.conc[i]:g} {lib_t.batch[i]} ({lib_t.moa[i]}) {s:.4f}" for i, s in zip(ii, ss))
-        rows.append({"imagem": name, "moa_sugerido": moa, "similaridade": round(float(ss[0]), 4), "limite": round(thr, 4), "vizinhos": top})
-        print(f"{name}: {moa} ({ss[0]:.4f})", flush=True)
+    for name, r in zip(names, pred.predict(fields, a.k)):
+        top = "; ".join(f"{v['composto']} {v['conc']:g} {v['semana']} ({v['moa']}) {v['similaridade']:.4f}" for v in r["vizinhos"])
+        rows.append({"imagem": name, "moa_sugerido": r["moa"], "similaridade": round(r["similaridade"], 4),
+                     "limite": round(r["limite"], 4), "vizinhos": top})
+        print(f"{name}: {r['moa']} ({r['similaridade']:.4f})", flush=True)
     df = pd.DataFrame(rows)
     a.out.parent.mkdir(exist_ok=True, parents=True)
     df.to_csv(a.out, mode="a", header=not a.out.exists(), index=False)
