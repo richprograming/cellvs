@@ -151,3 +151,17 @@ Por tratamento dá exatamente o NSCB da tabela, como deveria: é o mesmo protoco
 
 ### fotos do laboratório
 As fotos que tenho são de células de tecido, sem tratamento com compostos, com marcação desconhecida. O `predict.py` não serve para elas: a biblioteca é de MCF-7 tratadas. O que faria sentido é busca por semelhança e agrupamento entre as próprias fotos, sem MoA. Ainda não fiz.
+
+Atualização: são 9 fotos de lâminas de histologia tiradas pela ocular com o celular, quase todas em H&E e uma em tricrômico. Não há gabarito, então comparo com a minha leitura visual: cólon, língua, 2 de cerebelo, medula espinal, um órgão tubular (ducto deferente ou ureter?), 2 do mesmo campo de músculo com conjuntivo e a de tricrômico.
+
+- **DINOv2 entre as próprias fotos.** As duas fotos de cerebelo dão 0.860 e as duas do mesmo campo dão 0.907. Fotos sem relação ficam em 0.71 ou menos. Os dois pares parecidos são da mesma lâmina, então isso não mostra que ele reconhece o tecido em lâminas diferentes.
+- **Zero-shot, a foto inteira contra uma frase por tecido, com 30 tecidos e 3 frases cada:**
+  - PLIP errou bastante: chamou cerebelo de cartilagem.
+  - BiomedCLIP acertou o cólon com 0.81, mas chamou cerebelo de cartilagem com 0.94. Errar com essa confiança é o pior caso.
+  - QuiltNet acertou língua (0.23) e as 2 de cerebelo (0.24 e 0.14), e o cólon só ficou em 3º. Ele é o menos confiante, o que combina com o que ele sabe.
+  - Dividir em 9 pedaços não melhorou de forma clara.
+- **Similaridade foto a foto pelo QuiltNet não serve.** Fotos sem relação chegam a 0.91, e o par de cerebelo dá 0.966. Para comparar fotos, ficou o DINOv2.
+
+`scripts/tissue.py` usa o QuiltNet para o zero-shot, com "incerto" abaixo de 0.2, e o DINOv2 para comparar com as fotos já identificadas em `data/tecidos/<tecido>/`, que valem mais acima de 0.8. Os dois limites foram escolhidos olhando estas mesmas 9 fotos, então são provisórios. As fotos ficam em `data/`, fora do git.
+
+O que falta para ser um teste de verdade: fotos de mais de uma lâmina por tecido e um gabarito dado por alguém do laboratório.

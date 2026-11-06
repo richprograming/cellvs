@@ -56,6 +56,18 @@ Só faz sentido para imagens feitas como as do BBBC021: MCF-7, 24 h com um compo
 
 Na simulação (`results/holdout_summary.csv`), o DINOv2 acertou o MoA de 1702 de 2416 fotos individuais de compostos que a biblioteca nunca viu. A resposta "desconhecido" funciona mal: quando a classe inteira sai da biblioteca, ele só percebe em 161 de 2528 fotos e nas outras sugere um MoA errado.
 
+## Fotos de histologia (experimental)
+`scripts/tissue.py` sugere o tecido de fotos tiradas pela ocular, como lâminas de H&E fotografadas com o celular. Ele recorta o círculo iluminado e dá duas respostas:
+- **zero-shot**: o QuiltNet, um CLIP treinado com imagens de patologia, compara a foto com uma frase por tecido. Não precisa de exemplos. Abaixo de 0.2 de probabilidade, a resposta é "incerto".
+- **referência**: a foto mais parecida, pelo DINOv2, entre as que você já identificou em `data/tecidos/<tecido>/`. Se a similaridade passar de 0.8, a referência vale mais que o zero-shot.
+
+```bash
+python scripts/tissue.py --input data/fotos_lab/
+python scripts/tissue.py --input data/fotos_lab/ --watch
+```
+
+Foi testado com 9 fotos e sem gabarito: a comparação é com a minha leitura visual (cólon, língua, 2 de cerebelo, medula, órgão tubular, músculo e uma em tricrômico). No zero-shot, ele respondeu 3 fotos (língua, cerebelo e ducto deferente para o órgão tubular) e deu "incerto" nas outras 6. Os dois limites foram escolhidos olhando essas mesmas fotos. Os únicos pares parecidos são da mesma lâmina, então reconhecer o tecido em lâminas diferentes ainda não foi testado. PLIP e BiomedCLIP foram piores: o BiomedCLIP chamou cerebelo de cartilagem com 0.94.
+
 ## Métricas
 - **NSC**: vizinho mais próximo (cosseno) de cada tratamento, ignorando o mesmo composto.
 - **NSCB**: igual, mas ignorando também o mesmo batch (semana). É a que mede se o modelo generaliza ou só memoriza o batch.

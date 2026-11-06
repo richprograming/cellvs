@@ -6,6 +6,7 @@ opencv-python-headless
 torch
 torchvision
 umap-learn
+open_clip_torch
 matplotlib
 pytest
 ipykernel
