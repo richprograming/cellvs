@@ -1,6 +1,6 @@
 # cellvs
 
-![tests](https://github.com/OWNER/cellvs/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/richprograming/cellvs/actions/workflows/tests.yml/badge.svg)
 
 O que dá para ler de imagens de microscopia usando só modelos pré-treinados e abertos, com o acerto medido com cuidado para não se enganar com vazamento.
 
