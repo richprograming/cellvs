@@ -162,6 +162,37 @@ Atualização: são 9 fotos de lâminas de histologia tiradas pela ocular com o 
   - Dividir em 9 pedaços não melhorou de forma clara.
 - **Similaridade foto a foto pelo QuiltNet não serve.** Fotos sem relação chegam a 0.91, e o par de cerebelo dá 0.966. Para comparar fotos, ficou o DINOv2.
 
-`scripts/tissue.py` usa o QuiltNet para o zero-shot, com "incerto" abaixo de 0.2, e o DINOv2 para comparar com as fotos já identificadas em `data/tecidos/<tecido>/`, que valem mais acima de 0.8. Os dois limites foram escolhidos olhando estas mesmas 9 fotos, então são provisórios. As fotos ficam em `data/`, fora do git.
+A primeira versão do `scripts/tissue.py` usava os dois limites, 0.2 no zero-shot e 0.8 na referência. Foi substituída pelo que vem abaixo.
 
-O que falta para ser um teste de verdade: fotos de mais de uma lâmina por tecido e um gabarito dado por alguém do laboratório.
+O dono das fotos confirmou os 6 tecidos da minha leitura visual. A de tricrômico ficou sem rótulo.
+
+### tecidos com imagens públicas
+Não há mais fotos do laboratório, então busquei imagens públicas.
+
+- **Repositório da UCF (UCF-MultiOrgan-Path).** Tem 977 lâminas de 15 órgãos, mas devolve 403 para download automático e cada órgão tem de 7 a 20 GB. Não tentei contornar o bloqueio.
+- **Download do Commons.**
+  - A busca pela API de 30 tecidos trouxe 1107 imagens.
+  - Bug: o servidor de imagens devolve 429 com uma página HTML para miniaturas de tamanho fora do padrão (1024 px) e para originais. O script salvava essa página como `.jpg`. Agora pede só 960 ou 500 px e confere o content-type.
+- **Curadoria.**
+  - O filtro automático pelo CLIP, com frases como "H&E" contra "desenho" e "imuno-histoquímica", deixou passar muito lixo. Nessa versão o resultado foi 0.311 no zero-shot e 0.288 no classificador.
+  - Montei folhas de miniaturas numeradas por tecido e escolhi à mão: H&E ou próximo, tecido normal, foto real e órgão certo. Sobraram 316 imagens de 27 tecidos (`scripts/commons_curadoria.csv`).
+  - Coisas que apareceram na busca: fotos de uma cerimônia militar em "colon", plantas e rostos em "tongue", quase só coloração por prata em "cerebellum".
+  - 4 imagens de "colon" eram músculo esquelético e mudaram de classe. 2 imagens apareceram em duas classes e saíram.
+- **Avaliação.** GroupKFold em 5 partes por autor, porque a série de um autor costuma ser a mesma lâmina.
+
+| variante (QuiltNet-B-32 salvo indicação) | 1º palpite |
+|---|---|
+| zero-shot, frases simples, imagem inteira | 0.503 |
+| zero-shot + classificador, inteira + 4 quadrantes, frases descritivas | 0.560 (177/316), entre 3: 0.854 |
+| QuiltNet-B-16, melhor combinação | 0.484 |
+| Phikon-v2 (linear) + zero-shot | 0.544 |
+| QuiltNet + Phikon-v2 + zero-shot | 0.554 |
+| vizinho mais próximo DINOv2 | 0.295 |
+
+A configuração final é a melhor de 8 testadas nas mesmas imagens, então 0.560 é otimista. As frases descritivas foram escritas uma vez para os 30 tecidos, a partir de livro-texto e sem olhar os erros, mas eu já tinha visto o resultado por tecido da versão anterior.
+
+Nas 8 fotos do laboratório, com o classificador treinado só no Commons, o 1º palpite acertou 5/8: os 2 de cerebelo, cólon, ducto deferente e língua. A medula foi para o 2º lugar, e as 2 de músculo esquelético erraram. Depois do teste, as fotos entram no treino final do `models/tissue_clf.npz`.
+
+O Hibou-B não foi testado: precisa de `trust_remote_code`, ou seja, rodar código do repositório do modelo, e isso foi bloqueado.
+
+O app (`app.py`, Gradio) usa as mesmas classes que os scripts (`TissuePredictor` e `MoAPredictor`). Testei pela API: a aba de tecido deu cólon 0.32 e cerebelo 0.77 nas fotos, as mesmas respostas do script. Depois da refatoração, o `predict.py` deu as mesmas respostas de antes na semana 10.
