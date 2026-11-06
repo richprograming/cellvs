@@ -29,11 +29,20 @@ def crop_circle(bgr):
     return cv2.cvtColor(bgr[y0 : y0 + 2 * half, x0 : x0 + 2 * half], cv2.COLOR_BGR2RGB)
 
 
+def through_eyepiece(bgr):
+    """phone photos through the eyepiece have dark corners, scanned or published micrographs do not"""
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape
+    k = max(min(h, w) // 10, 1)
+    corners = [gray[:k, :k], gray[:k, -k:], gray[-k:, :k], gray[-k:, -k:]]
+    return float(np.mean([c.mean() for c in corners])) < 60
+
+
 def read_photo(path):
     bgr = cv2.imread(str(path))
     if bgr is None:
         raise FileNotFoundError(path)
-    return crop_circle(bgr)
+    return crop_circle(bgr) if through_eyepiece(bgr) else cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
 
 
 def _norm(e):
@@ -55,9 +64,19 @@ class Model:
         self.dino = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14").eval()
 
     @torch.no_grad()
-    def zero_shot(self, rgbs):
-        e = _norm(self.net.encode_image(torch.stack([self.pre(Image.fromarray(x)) for x in rgbs])))
+    def quilt_emb(self, rgbs):
+        return _norm(self.net.encode_image(torch.stack([self.pre(Image.fromarray(x)) for x in rgbs]))).numpy()
+
+    def zero_shot(self, rgbs=None, emb=None):
+        e = torch.from_numpy(self.quilt_emb(rgbs) if emb is None else emb)
         return (self.scale * e @ self.text.T).softmax(-1).numpy()
+
+    @torch.no_grad()
+    def prompt_probs(self, emb, prompts):
+        import open_clip
+
+        t = _norm(self.net.encode_text(open_clip.get_tokenizer(MODEL)(prompts)))
+        return (self.scale * torch.from_numpy(emb) @ t.T).softmax(-1).numpy()
 
     @torch.no_grad()
     def similarity_emb(self, rgbs):
