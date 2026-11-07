@@ -77,8 +77,9 @@ with gr.Blocks(title="cellvs") as demo:
                     mtab = gr.Dataframe(label="tratamentos mais parecidos")
             minp.change(label_moa, minp, [mhead, mtab])
     with gr.Tab("Quanto acerta"):
-        gr.Markdown("**Tecido**: imagens públicas do Wikimedia Commons, cada teste deixa autores inteiros de fora.")
-        gr.Dataframe(results_table("results/tecidos_eval.csv", ["metodo", "n", "top1", "top1_balanceada", "top3", "acaso_top1"]))
+        gr.Markdown("**Tecido**: imagens do Wikimedia Commons e recortes de lâminas do GTEx. "
+                    "Cada teste deixa autores (Commons) ou doadores (GTEx) inteiros de fora.")
+        gr.Dataframe(results_table("results/tecidos_eval.csv", ["teste", "metodo", "n", "top1", "top1_balanceada", "top3", "acaso_top1"]))
         gr.Markdown("**MoA**: BBBC021, vizinho mais próximo ignorando o mesmo composto (NSC) e também a mesma semana (NSCB).")
         gr.Dataframe(results_table("results/holdout_summary.csv"))
 

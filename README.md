@@ -9,7 +9,7 @@ O projeto tem duas partes:
 | | Pergunta | Dados | Melhor resultado (em dados nunca vistos) |
 |---|---|---|---|
 | **MoA** | qual o mecanismo de ação de um composto, a partir de células tratadas? | BBBC021: MCF-7, 38 compostos, 12 MoA | 83/101 tratamentos (NSCB, DINOv2), acaso 0.058 |
-| **Tecido** | qual tecido está numa foto de lâmina de histologia? | 316 imagens públicas do Wikimedia Commons, 27 tecidos | 177/316 no 1º palpite, 270/316 entre 3, acaso 0.037 |
+| **Tecido** | qual tecido está numa foto de lâmina de histologia? | 316 imagens do Wikimedia Commons + 638 lâminas do GTEx, 29 tecidos | Commons: 180/316 no 1º palpite, 261/316 entre 3, acaso 0.037 |
 
 E um app (`python app.py`) que responde uma foto enviada ou a câmera ao vivo, inclusive foto de celular tirada pela ocular do microscópio.
 
@@ -50,7 +50,7 @@ UMAPs por MoA e por semana em `notebooks/01_umap.ipynb` e `results/umap_*.png`.
 ```bash
 # metadados em https://bbbc.broadinstitute.org/BBBC021 (BBBC021_v1_image.csv e BBBC021_v1_moa.csv em data/raw)
 python scripts/0_prepare_metadata.py --raw data/raw
-python scripts/download_images.py --meta data/metadata.csv --raw data/raw   # só as 3848 imagens usadas, 13 GB, retoma se parar
+python scripts/download_images.py --meta data/metadata.csv --raw data/raw   # só as 3848 imagens usadas, 29 GB, retoma se parar
 python scripts/1_embed.py --img-root data/raw --backbone dinov2_vits14      # ~24 min em CPU (Ryzen 5 4600G)
 python scripts/1_embed.py --img-root data/raw --backbone resnet50
 python scripts/2_evaluate.py --emb results/emb_dinov2_vits14.npy [--no-center]
@@ -66,24 +66,32 @@ Para GPU, há `notebooks/00_colab_embeddings.ipynb` (ainda não testado no Colab
 
 ![acerto por tecido](results/tecidos_por_tecido.png)
 
-**Dados.** Busquei imagens de 30 tecidos no Wikimedia Commons (`scripts/fetch_commons.py`, que guarda autor e licença de cada uma). A busca traz muito lixo, como esquemas, imuno-histoquímica, tecido doente e fotos que nada têm a ver. Olhei as 1096 imagens e fiquei com 316 de 27 tecidos: H&E ou parecido, tecido normal, foto de microscopia de verdade. A lista está em `scripts/commons_curadoria.csv`. Osso, córtex cerebral e nervo ficaram com menos de 5 imagens boas e saíram.
+**Dados.** Busquei imagens de 30 tecidos no Wikimedia Commons (`scripts/fetch_commons.py`, que guarda autor e licença de cada uma). A busca traz muito lixo, como esquemas, imuno-histoquímica, tecido doente e fotos que nada têm a ver. Olhei as 1096 imagens e fiquei com 316 de 27 tecidos: H&E ou parecido, tecido normal, foto de microscopia de verdade. A lista está em `scripts/commons_curadoria.csv`. Osso, córtex cerebral e nervo ficaram com menos de 5 imagens boas.
+
+Depois entrou o **GTEx** (`scripts/fetch_gtex.py`): lâminas H&E de tecido normal de doadores, abertas no NCI Imaging Data Commons com licença CC BY 4.0. Peguei 29 lâminas por tecido, cada uma de um doador diferente, em 22 tecidos que batem com a lista (638 lâminas, 464 doadores). Só o nível de ~2 µm/px de cada lâmina é baixado (~30 MB). Dele saem até 8 recortes de 2 mm e 1 mm, parecidos com o campo das objetivas de 10× e 20×, onde pelo menos 60% é tecido, e a lâmina é apagada. São 5059 recortes, 581 MB. Com o GTEx, nervo e córtex cerebral voltaram: 29 tecidos. Osso, cartilagem, ducto deferente, língua, linfonodo, medula espinal, traqueia e ureter não existem no GTEx e seguem só com o Commons. O rótulo do GTEx é o local da coleta, não o que aparece no recorte: um recorte de bexiga pode ser só parede muscular.
 
 **Método.** QuiltNet-B-32, um CLIP treinado com 1 milhão de imagens de patologia, gera um embedding da imagem inteira e dos seus 4 quadrantes (média). A resposta soma duas coisas:
 - **zero-shot**: similaridade com frases que descrevem cada tecido ("thyroid with round follicles lined by cuboidal cells and filled with pink colloid"), escritas uma vez a partir de livro-texto;
-- **classificador**: regressão logística sobre o mesmo embedding, treinada nas imagens do Commons.
+- **classificador**: regressão logística sobre o mesmo embedding, treinada nas imagens do Commons e nos recortes do GTEx. Cada lâmina do GTEx pesa como uma imagem do Commons, não importa quantos recortes deu.
 
 Fotos tiradas pela ocular têm o círculo iluminado recortado automaticamente.
 
-**Avaliação.** Validação cruzada em 5 partes que deixa **autores inteiros** de fora: uma série de um mesmo autor costuma vir da mesma lâmina, e deixá-la dos dois lados inflaria o resultado.
+**Avaliação.** Validação cruzada em 5 partes que deixa **autores inteiros** (Commons) ou **doadores inteiros** (GTEx) de fora: as imagens de um mesmo autor ou doador costumam vir da mesma lâmina, e deixá-las dos dois lados inflaria o resultado. As comparações foram fixadas antes de ver qualquer resultado do GTEx.
 
-| método | 1º palpite | balanceado | entre 3 |
-|---|---|---|---|
-| zero-shot, sem treino | 160/316 (0.506) | 0.482 | 265/316 (0.839) |
-| classificador | 130/316 (0.411) | 0.373 | 192/316 (0.608) |
-| **zero-shot + classificador** | **177/316 (0.560)** | **0.540** | **270/316 (0.854)** |
-| idem, 8 fotos de celular pela ocular (outras lâminas) | 5/8 | | 6/8 |
+| teste | método | 1º palpite | balanceado | entre 3 |
+|---|---|---|---|---|
+| Commons | zero-shot, sem treino | 159/316 (0.503) | 0.476 | 264/316 (0.835) |
+| Commons | zero-shot + classificador, treino só no Commons | 177/316 (0.560) | 0.540 | 270/316 (0.854) |
+| Commons | **zero-shot + classificador, treino Commons + GTEx (final)** | **180/316 (0.570)** | **0.521** | **261/316 (0.826)** |
+| GTEx | zero-shot, sem treino | 2121/5059 (0.419) | 0.417 | 3348/5059 (0.662) |
+| GTEx | zero-shot + classificador, treino só no Commons | 2162/5059 (0.427) | 0.425 | 3105/5059 (0.614) |
+| GTEx | **zero-shot + classificador, treino Commons + GTEx (final)** | **2957/5059 (0.585)** | **0.584** | **3956/5059 (0.782)** |
+| 8 fotos de celular pela ocular (outras lâminas) | treino só no Commons | 5/8 | | 6/8 |
+| 8 fotos de celular pela ocular (outras lâminas) | **treino Commons + GTEx (final)** | **5/8** | | **6/8** |
 
-Acaso: 1/27 = 0.037. Números completos em `results/tecidos_eval.csv` e `results/tecidos_por_tecido.csv`.
+Acaso: 1/27 = 0.037 no Commons, 1/22 = 0.045 no GTEx. Números completos em `results/tecidos_eval.csv` e `results/tecidos_por_tecido.csv`.
+
+**O GTEx ajudou?** Nas lâminas escaneadas, muito: de 0.427 para 0.585 no 1º palpite. Nas imagens do Commons, quase nada no 1º palpite (+3 imagens) e piorou entre 3 (−9 imagens). Nas fotos do laboratório, nada: os mesmos 5 acertos. Fiquei com o modelo novo porque ele cobre 2 tecidos a mais e empata no resto, mas o ganho não chega ao tipo de foto que mais importa aqui. Duas explicações prováveis: o rótulo do GTEx é o local de coleta (bexiga e intestino delgado acertam 1% e 3% no GTEx, provavelmente porque os recortes são da parede muscular), e uma lâmina escaneada não se parece com uma foto pela ocular.
 
 **O que não funcionou**, medido do mesmo jeito:
 - PLIP e BiomedCLIP no zero-shot. O BiomedCLIP chamou cerebelo de cartilagem com 0.94 de probabilidade.
@@ -92,11 +100,12 @@ Acaso: 1/27 = 0.037. Números completos em `results/tecidos_eval.csv` e `results
 - Vizinho mais próximo pelo DINOv2: 0.295.
 - O filtro automático de imagens pelo próprio CLIP: deixou passar muito lixo, por isso a curadoria foi manual.
 
-**Ressalvas.** A configuração final é a melhor de 8 combinações testadas nas mesmas imagens, então o acerto real deve ser um pouco menor. As fotos do laboratório são só 8, de 6 tecidos. Ureter, medula espinal, intestino delgado, ovário e língua ainda erram muito no 1º palpite.
+**Ressalvas.** A configuração do zero-shot e do classificador é a melhor de 8 combinações testadas nas imagens do Commons, então lá o acerto real deve ser um pouco menor. As fotos do laboratório são só 8, de 6 tecidos. Artéria, medula espinal, ureter, intestino delgado e ovário ainda erram muito no 1º palpite.
 
 ```bash
 python scripts/fetch_commons.py                 # ~1100 imagens, ~330 MB, data/commons + creditos.csv
-python scripts/tissue_train.py                  # avaliação + models/tissue_clf.npz
+python scripts/fetch_gtex.py --gb 20            # ~640 lâminas, ~30 min, só os recortes ficam: data/gtex, ~580 MB
+python scripts/tissue_train.py                  # avaliação + models/tissue_clf.npz, ~30 min em CPU na 1ª vez
 python scripts/tissue_figure.py
 python scripts/tissue.py --input fotos/ [--watch]
 ```

@@ -81,6 +81,7 @@ tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 
 .ok { color: var(--hit); } .no { color: var(--miss); }
 
 .chart { display: grid; gap: 4px; }
+.chart h4 { margin: 14px 0 4px; font-size: 0.95rem; }
 .row { display: grid; grid-template-columns: 200px minmax(120px, 1fr) 190px; gap: 12px; align-items: center; font-size: 14px; min-height: 28px; }
 .track { position: relative; height: 22px; }
 .track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
@@ -212,7 +213,7 @@ tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 
 
 <section id="tissue" hidden>
   <h2>E fotos de lâmina tiradas com o celular?</h2>
-  <p>A mesma ideia, de um modelo pré-treinado que já sabe olhar, aplicada a outra pergunta: qual tecido está na lâmina. O QuiltNet, treinado com 1 milhão de imagens de patologia, compara a foto com uma descrição de livro-texto de cada tecido. Um classificador pequeno, treinado com imagens públicas do Wikimedia Commons que escolhi uma a uma, soma o seu voto.</p>
+  <p>A mesma ideia, de um modelo pré-treinado que já sabe olhar, aplicada a outra pergunta: qual tecido está na lâmina. O QuiltNet, treinado com 1 milhão de imagens de patologia, compara a foto com uma descrição de livro-texto de cada tecido. Um classificador pequeno soma o seu voto. Ele foi treinado com imagens públicas do Wikimedia Commons, escolhidas uma a uma, e com recortes de 638 lâminas de tecido normal do GTEx, de 464 doadores.</p>
   <div class="panel">
     <h3>Fotos do laboratório, pela ocular, que o modelo nunca viu</h3>
     <p class="note">O círculo é recortado sozinho. Abaixo de cada foto: o tecido de verdade e os 3 palpites.</p>
@@ -220,7 +221,7 @@ tr.nbr button:focus-visible { outline: 2px solid var(--accent); outline-offset: 
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Método</th><th class="num">1º palpite</th><th class="num">Entre 3</th></tr></thead>
+      <thead><tr><th>Teste</th><th>Método</th><th class="num">1º palpite</th><th class="num">Entre 3</th></tr></thead>
       <tbody id="tissue-table"></tbody>
     </table>
   </div>
@@ -394,19 +395,24 @@ if (D.tissue) {
     return `<figure><img src="${p.img}" alt="Foto de lâmina de ${esc(p.tecido)} tirada pela ocular"><figcaption><b>${esc(p.tecido)}</b>${pill}
       <ol>${p.top.map(([n, q]) => `<li class="${n === p.tecido ? "right" : ""}">${esc(n)} <span class="num">${pct(q)}</span></li>`).join("")}</ol></figcaption></figure>`;
   }).join("");
-  const NAME = {"zero-shot (sem treino)": "Só zero-shot, sem treino", "classificador": "Só o classificador",
-    "zero-shot + classificador": "Zero-shot + classificador", "zero-shot + classificador, fotos do laboratorio": "Idem, nas fotos do laboratório"};
-  $("tissue-table").innerHTML = X.eval.map(r => `<tr><td>${NAME[r.metodo] || esc(r.metodo)}</td><td class="num">${r.acertos_top1}/${r.n} (${pct(r.top1)})</td><td class="num">${r.acertos_top3}/${r.n} (${pct(r.top3)})</td></tr>`).join("");
-  const ch = X.eval[0].acaso_top1;
-  $("tissue-note").textContent = `${X.per.length} tecidos. Cada teste deixa autores inteiros de fora, porque a série de um autor costuma vir da mesma lâmina. Acaso: ${pct(ch)}. A configuração é a melhor de 8 testadas nas mesmas imagens, então o número real deve ser um pouco menor.`;
-  $("tissue-chance").textContent = `tracejado: acaso (${pct(ch)})`;
-  const per = [...X.per].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3);
-  $("tissue-chart").innerHTML = per.map(r => `<div class="row" title="${esc(r.tecido)}: ${r.acertos_top1}/${r.n} no 1º palpite, ${r.acertos_top3}/${r.n} entre 3"><div>${esc(r.tecido)}</div><div class="track">
+  const NAME = {"zero-shot (sem treino)": "Só zero-shot, sem treino",
+    "A. zero-shot + classificador (Commons)": "Zero-shot + classificador treinado só no Commons",
+    "B. zero-shot + classificador (Commons + GTEx)": "Zero-shot + classificador treinado no Commons + GTEx (final)"};
+  const TEST = {"Commons": "Commons", "GTEx": "GTEx", "fotos do laboratorio": "Fotos do laboratório"};
+  $("tissue-table").innerHTML = X.eval.map(r => `<tr><td>${TEST[r.teste] || esc(r.teste)}</td><td>${NAME[r.metodo] || esc(r.metodo)}</td><td class="num">${r.acertos_top1}/${r.n} (${pct(r.top1)})</td><td class="num">${r.acertos_top3}/${r.n} (${pct(r.top3)})</td></tr>`).join("");
+  const nT = new Set(X.per.map(r => r.tecido)).size;
+  $("tissue-note").textContent = `${nT} tecidos. Cada teste deixa autores (Commons) ou doadores (GTEx) inteiros de fora, porque as imagens de um mesmo autor ou doador costumam vir da mesma lâmina. O GTEx melhorou muito o acerto em lâminas escaneadas, mas quase nada nas imagens do Commons e nada nas fotos do laboratório. A configuração do zero-shot foi a melhor de 8 testadas nas imagens do Commons, então lá o número real deve ser um pouco menor.`;
+  $("tissue-chance").textContent = `tracejado: acaso`;
+  const axis = `<div class="row"><div></div><div class="axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div><div></div></div>`;
+  $("tissue-chart").innerHTML = ["Commons", "GTEx"].filter(t => X.per.some(r => r.teste === t)).map(t => {
+    const per = X.per.filter(r => r.teste === t).sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3);
+    const c = 1 / per.length;
+    return `<h4>${t === "Commons" ? "Wikimedia Commons, autores nunca vistos" : "GTEx, doadores nunca vistos"}</h4>` + per.map(r => `<div class="row" title="${esc(r.tecido)}: ${r.acertos_top1}/${r.n} no 1º palpite, ${r.acertos_top3}/${r.n} entre 3"><div>${esc(r.tecido)}</div><div class="track">
       <span class="grid" style="left:0"></span><span class="grid" style="left:50%"></span><span class="grid" style="left:100%"></span>
-      <span class="chance" style="left:${ch * 100}%"></span>
+      <span class="chance" style="left:${c * 100}%"></span>
       <span class="dot a" style="left:${r.top1 * 100}%"></span><span class="dot b" style="left:${r.top3 * 100}%"></span>
-    </div><div class="vals">${r.acertos_top1}/${r.n} · ${r.acertos_top3}/${r.n}</div></div>`).join("")
-    + `<div class="row"><div></div><div class="axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div><div></div></div>`;
+    </div><div class="vals">${r.acertos_top1}/${r.n} · ${r.acertos_top3}/${r.n}</div></div>`).join("") + axis;
+  }).join("");
 }
 </script>
 </body>

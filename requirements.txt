@@ -12,3 +12,5 @@ matplotlib
 pytest
 ipykernel
 nbconvert
+idc-index
+pydicom
